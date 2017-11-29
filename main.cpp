@@ -14,7 +14,7 @@
  *
  * cube.c by R. Teather
  *  Simple "hello world" equivalent 3D graphics program
- *  Draws a spinning cube centered at the origin
+ *  Dras a spinning cube centered at the origin
  */
 
 int ang = 0;	//angle for rotating cube
