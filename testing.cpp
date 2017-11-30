@@ -15,6 +15,8 @@
 float camPos[] = {0, 0, 3.42f};	//where the camera is
 float xSpot = 0, ySpot = 0, zSpot = 0;
 float moveAmount = 0.25f;
+float rotateDegree = 0;
+float rotateAmount = 45;
 
 void drawTeapot(void)
 {
@@ -98,7 +100,14 @@ void keyboard(unsigned char key, int xIn, int yIn)
 		case 27:	//27 is the esc key
 			exit(0);
 			break;
+		case 'd':
+			rotateDegree+= rotateAmount;
+			break;
+		case 'a':
+			rotateDegree-= rotateAmount;
+			break;
 	}
+	glutPostRedisplay();
 }
 
 void moving(int key, int x, int y)
@@ -116,6 +125,12 @@ void moving(int key, int x, int y)
 		break;
 	case GLUT_KEY_DOWN:
 		ySpot-=moveAmount;
+		break;
+	case GLUT_KEY_F1:
+		zSpot+=moveAmount;
+		break;
+	case GLUT_KEY_F12:
+		zSpot-=moveAmount;
 		break;
 	}
 	glutPostRedisplay();
@@ -146,6 +161,7 @@ void display(void)
 	drawRoom();
 	
 	glPushMatrix();
+	glRotatef(rotateDegree,0,1,0);
 	glTranslatef(xSpot,ySpot,zSpot);
 	drawTeapot();
 	glPopMatrix();
@@ -163,7 +179,7 @@ int main(int argc, char** argv)
 	glutInitWindowSize(400, 400);
 	glutInitWindowPosition(50, 50);
 
-	glutCreateWindow("3GC3 Boilerplate");	//creates the window
+	glutCreateWindow("Testing");	//creates the window
 
 	glutDisplayFunc(display);	//registers "display" as the display callback function
 	glutKeyboardFunc(keyboard);
