@@ -4,6 +4,8 @@ Emily Ashworth 0014...
 
 Hi, welcome to our assignment #3.
 
+*Write here what we did not get done but to please look at our code cause that must be worth something :) *
+
 Controls:
 'a' - add object
 
