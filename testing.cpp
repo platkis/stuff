@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
@@ -13,16 +14,49 @@
 
 //Globals
 float camPos[] = {0, 0, 3.42f};	//where the camera is
-float xSpot = 0, ySpot = 0, zSpot = 0;
-float moveAmount = 0.25f;
-float rotateDegree = 0;
-float rotateAmount = 45;
 
-void drawTeapot(void)
-{
-	glColor3f(1,0,0);
-	glutSolidTeapot(0.5);
+typedef struct { float x; float y; float z; } Vec3D;
+
+typedef struct { 
+	Vec3D position;
+	int shape; //0 cube, 1 teapot 
+	Vec3D scale; 
+	Vec3D rotation;
+	bool selected;
+}Object;
+
+Object objectList[100];
+
+int lastSelected = 0; //index in Object array
+int index;
+int intersected;
+int shape; //0 teapot, 1 sphere, 2 cone
+
+double* m_start = new double[3];
+double* m_end = new double[3];
+
+void addObject(){
+	
+	lastSelected = index;
+	objectList[lastSelected].position = {0,0,0};
+	objectList[lastSelected].shape = shape;
+	objectList[lastSelected].scale = {1,1,1};
+	objectList[lastSelected].rotation = {0,0,1};
+	objectList[lastSelected].selected = true;
+
+	index++;
+
 }
+
+void deleteAll(){
+	for(int i = 0; i < index; i++){
+		objectList[i].scale = {0,0,0};
+	}
+}
+void deleteObject(int i){
+	objectList[i].scale = {0,0,0};
+}
+
 
 void drawRoom()
 {
@@ -91,6 +125,147 @@ void drawRoom()
     glEnd();
 }
 
+void intersection(int btn, int state, int x, int y){
+	printf("(%f,%f,%f)----(%f,%f,%f)\n", m_start[0], m_start[1], m_start[2], m_end[0], m_end[1], m_end[2]);
+
+			double matModelView[16], matProjection[16]; 
+			int viewport[4]; 
+
+			// get matrix and viewport:
+			glGetDoublev( GL_MODELVIEW_MATRIX, matModelView ); 
+			glGetDoublev( GL_PROJECTION_MATRIX, matProjection ); 
+			glGetIntegerv( GL_VIEWPORT, viewport ); 
+
+			// window pos of mouse, Y is inverted on Windows
+			double winX = (double)x; 
+			double winY = viewport[3] - (double)y; 
+
+			// get point on the 'near' plane (third param is set to 0.0)
+			gluUnProject(winX, winY, 0.0, matModelView, matProjection, 
+					viewport, &m_start[0], &m_start[1], &m_start[2]); 
+
+			// get point on the 'far' plane (third param is set to 1.0)
+			gluUnProject(winX, winY, 1.0, matModelView, matProjection, 
+					viewport, &m_end[0], &m_end[1], &m_end[2]); 
+
+			// now you can create a ray from m_start to m_end
+			printf("(%f,%f,%f)----(%f,%f,%f)\n\n", m_start[0], m_start[1], m_start[2], m_end[0], m_end[1], m_end[2]);
+		
+		
+		
+			//----------------------------------------
+			// test Sun - Ray intersection
+			//----------------------------------------
+			double* R0 = new double[3];
+			double* Rd = new double[3];
+
+			double xDiff = m_end[0] - m_start[0];
+			double yDiff = m_end[1] - m_start[1];
+			double zDiff = m_end[2] - m_start[2];
+
+			double mag = sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff);
+			R0[0] = m_start[0];
+			R0[1] = m_start[1];
+			R0[2] = m_start[2];
+
+			Rd[0] = xDiff / mag;
+			Rd[1] = yDiff / mag;
+			Rd[2] = zDiff / mag;
+
+			//useful???
+			double A = Rd[0] * Rd[0] + Rd[1] * Rd[1] + Rd[2] * Rd[2];
+			double* R0Pc = new double[3];
+			R0Pc[0] = R0[0] - objectList[intersected].position.x;
+			R0Pc[1] = R0[1] - objectList[intersected].position.y;
+			R0Pc[2] = R0[2] - objectList[intersected].position.z;
+
+			double B = 2 * ( R0Pc[0] * Rd[0] + R0Pc[1] * Rd[1] + R0Pc[2] * Rd[2]);
+			double C = (R0Pc[0]*R0Pc[0] + R0Pc[1] * R0Pc[1] + R0Pc[2] * R0Pc[2]) - (objectList[intersected].scale.x *objectList[intersected].scale.x );
+
+			double discriminent = B*B - 4* A *C;
+
+			if( discriminent < 0)
+				printf("no intersection!\n");
+			else{
+				double t1 = (-B + sqrt(discriminent)) / (2*A);
+				double t2 = (-B - sqrt(discriminent)) / (2*A);
+
+				printf("Intersection at t= %f, %f\n", t1, t2);
+
+				lastSelected = intersected;
+			}
+			/*
+			//distance
+			double tx = (objectList[intersected].position.x - m_start[0])/Rd[0];
+			double ty = (objectList[intersected].position.y - m_start[1])/Rd[1];
+			double tz = (objectList[intersected].position.z - m_start[2])/Rd[2];
+			
+			//offset
+
+			Vec3D offx, offy, offz;
+			offx.x = objectList[intersected].position.x;
+			offx.y = m_start[1] + tx*Rd[1];
+			offx.z = m_start[1] + tx*Rd[2];
+
+			offy.x = m_start[0] + ty*Rd[0];
+			offy.y = objectList[intersected].position.y + 1;			
+			offy.z = m_start[1] + ty*Rd[2];
+
+			offz.x = m_start[0] + ty*Rd[0];
+			offz.y = m_start[1] + tx*Rd[1];
+			offz.z = objectList[intersected].position.z;
+
+			//check if its within boundaries (from lecture slides)
+			//x side
+			
+			if(	offx.x > objectList[intersected].position.x - objectList[intersected].scale.x &&
+				offx.x < objectList[intersected].position.x + objectList[intersected].scale.x &&
+				offx.y > objectList[intersected].position.y - objectList[intersected].scale.x &&
+				offx.y < objectList[intersected].position.y + objectList[intersected].scale.x &&
+				offx.z > objectList[intersected].position.z - objectList[intersected].scale.x &&
+				offx.z < objectList[intersected].position.z + objectList[intersected].scale.x){
+					objectList[intersected].selected = true;
+					lastSelected = intersected;
+					printf("test1 \n");
+				}
+			else if(offy.x > objectList[intersected].position.x - objectList[intersected].scale.y &&
+				offy.x < objectList[intersected].position.x + objectList[intersected].scale.y &&
+				offy.y > objectList[intersected].position.y - objectList[intersected].scale.y &&
+				offy.y < objectList[intersected].position.y + objectList[intersected].scale.y &&
+				offy.z > objectList[intersected].position.z - objectList[intersected].scale.y &&
+				offy.z < objectList[intersected].position.z + objectList[intersected].scale.y
+			){
+				objectList[intersected].selected = true;
+				lastSelected = intersected;
+				printf("test2 \n");
+			}	
+			else if(offz.x > objectList[intersected].position.x - objectList[intersected].scale.z &&
+				offz.x < objectList[intersected].position.x + objectList[intersected].scale.z &&
+				offz.y > objectList[intersected].position.y - objectList[intersected].scale.z &&
+				offz.y < objectList[intersected].position.y + objectList[intersected].scale.z &&
+				offz.z > objectList[intersected].position.z - objectList[intersected].scale.z &&
+				offz.z < objectList[intersected].position.z + objectList[intersected].scale.z
+			){
+				objectList[intersected].selected = true;
+				lastSelected = intersected;
+				printf("test3 \n");
+			}	*/
+}
+void mouse(int btn, int state, int x, int y){
+	if (btn == GLUT_LEFT_BUTTON){
+		if (state == GLUT_UP){
+		}
+
+		if (state == GLUT_DOWN){
+			intersection(btn,state,x,y);
+		}
+	}
+	if (btn == GLUT_RIGHT_BUTTON){
+		intersection(btn,state,x,y);
+		deleteObject(lastSelected);
+	}
+
+}
 //OpenGL functions
 void keyboard(unsigned char key, int xIn, int yIn)
 {
@@ -100,12 +275,72 @@ void keyboard(unsigned char key, int xIn, int yIn)
 		case 27:	//27 is the esc key
 			exit(0);
 			break;
-		case 'd':
-			rotateDegree+= rotateAmount;
+		case 'X':
+			objectList[lastSelected].rotation.x+=1;
+			break;
+		case 'x':
+			objectList[lastSelected].rotation.x-=1;
+			break;
+		case 'Y':
+			objectList[lastSelected].rotation.y+=1;
+			break;
+		case 'y':
+			objectList[lastSelected].rotation.y-=1;
+			break;
+		case 'Z':
+			objectList[lastSelected].rotation.z+=1;
+			break;
+		case 'z':
+			objectList[lastSelected].rotation.z-=1;
 			break;
 		case 'a':
-			rotateDegree-= rotateAmount;
+		case 'A':
+			addObject();
 			break;
+		case 'n':
+			objectList[lastSelected].position.z+=0.1;
+			break;
+		case 'm':
+			objectList[lastSelected].position.z-=0.1;
+			break;
+		case 'f':
+			objectList[lastSelected].scale.x-=0.3;
+			break;
+		case 'F':
+			objectList[lastSelected].scale.x+=0.3;
+			break;
+		case 'g':
+			objectList[lastSelected].scale.y-=0.3;
+			break;
+		case 'G':
+			objectList[lastSelected].scale.y+=0.3;
+			break;
+		case 'h':
+			objectList[lastSelected].scale.z-=0.3;
+			break;
+		case 'H':
+			objectList[lastSelected].scale.z+=0.3;
+			break;
+		case 'p':
+			shape = 0;
+			break;
+		case 'o':
+			shape = 1;
+			break;
+		case 'i':
+			shape = 2;
+			break;
+		case 'k':
+			shape = 3;
+			break;
+		case 'j':
+			shape = 4;
+			break;
+		case 'r':
+		case 'R':
+			deleteAll();
+			break;
+
 	}
 	glutPostRedisplay();
 }
@@ -115,22 +350,20 @@ void moving(int key, int x, int y)
 	switch(key)
 	{
 	case GLUT_KEY_LEFT:
-		xSpot-=moveAmount;
+		objectList[lastSelected].position.x-=0.1;
+		//xSpot-=0.1;
 		break;
 	case GLUT_KEY_RIGHT:
-		xSpot+=moveAmount;
+		objectList[lastSelected].position.x+=0.1;	
+		//xSpot+=0.1;
 		break;
 	case GLUT_KEY_UP:
-		ySpot+=moveAmount;
+		objectList[lastSelected].position.y+=0.1;
+		//ySpot+=0.1;
 		break;
 	case GLUT_KEY_DOWN:
-		ySpot-=moveAmount;
-		break;
-	case GLUT_KEY_F1:
-		zSpot+=moveAmount;
-		break;
-	case GLUT_KEY_F12:
-		zSpot-=moveAmount;
+		objectList[lastSelected].position.y-=0.1;
+		//ySpot-=0.1;
 		break;
 	}
 	glutPostRedisplay();
@@ -144,8 +377,31 @@ void init(void)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(45, 1, 1, 100);
+
+	//initialize the values
+	m_start[0] = 0;
+	m_start[1] = 0;
+	m_start[2] = 0;
+
+	m_end[0] = 0;
+	m_end[1] = 0;
+	m_end[2] = 0;
+}
+void reshape(int w, int h)
+{
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	//gluOrtho2D(0, w, 0, h);
+	gluPerspective(45, (float)((w+0.0f)/h), 1, 100);
+
+	glMatrixMode(GL_MODELVIEW);
+	glViewport(0, 0, w, h);
 }
 
+void FPSTimer(int value){ //60fps
+	glutTimerFunc(17, FPSTimer, 0);
+	glutPostRedisplay();
+}
 /* display function - GLUT display callback function
  *		clears the screen, sets the camera position, draws the ground plane and movable box
  */
@@ -159,15 +415,40 @@ void display(void)
 	gluLookAt(camPos[0], camPos[1], camPos[2], 0, 0, 0, 0,1,0);
 	
 	drawRoom();
+	glColor3f(1,0,0);
 	
-	glPushMatrix();
-	glRotatef(rotateDegree,0,1,0);
-	glTranslatef(xSpot,ySpot,zSpot);
-	drawTeapot();
-	glPopMatrix();
 
+	for(int i = 0; i < index; i++){
+		intersected = i;
+		if(objectList[i].selected){
+			glPushMatrix();
+			glRotatef(objectList[i].rotation.x,objectList[i].rotation.y,objectList[i].rotation.z,0);
+			glTranslatef(objectList[i].position.x,objectList[i].position.y,objectList[i].position.z);		
+			glScalef(objectList[i].scale.x,objectList[i].scale.y,objectList[i].scale.z);
+			if(objectList[i].shape == 0){
+				glutSolidTeapot(0.25);
+			}
+			else if(objectList[i].shape == 1){
+				glutSolidSphere(0.25,100,100);
+			}
+			else if(objectList[i].shape == 2){
+				glutSolidCone(0.25,0.25,100,100);
+			}
+			else if(objectList[i].shape == 3){
+				//cylinder
+				glutSolidCone(0.25,0.25,100,100);
+			}
+			else if(objectList[i].shape == 4){
+				glutSolidCube(0.25);
+			}
+
+			glPopMatrix();
+		}
+    }
+
+	
 	//flush out to single buffer
-	glFlush();
+	glutSwapBuffers();
 }
 
 /* main function - program entry point */
@@ -185,6 +466,14 @@ int main(int argc, char** argv)
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(moving);
 	
+	glutMouseFunc(mouse);
+	//resize callback
+	glutReshapeFunc(reshape);
+	
+		//fps timer callback
+		glutTimerFunc(17, FPSTimer, 0);
+
+
 	init();
 
 	glutMainLoop();				//starts the event glutMainLoop
