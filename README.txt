@@ -4,7 +4,9 @@ Emily Ashworth 001402976
 
 Hi, welcome to our assignment #3.
 
-*Write here what we did not get done but to please look at our code cause that must be worth something :) *
+Our assignment 3 has the ability to create cubes, cyinders, cones, spheres, and teapots with the click of a button. You can also translate or rotate your most recently created object.
+
+We were unable to make the ray intersection work however we believe we were close and you can have a look at our code to see for yourself. Enjoy :)
 
 Controls:
 'a' - add object
