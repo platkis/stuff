@@ -450,6 +450,7 @@ int main(int argc, char** argv)
 		//fps timer callback
 		glutTimerFunc(17, FPSTimer, 0);
 
+	printf("Authors: \nSharon Platkin 001316625\nEmily Ashworth 001402976\n\nHi, welcome to our assignment #3. Our assignment 3 has the ability to create cubes, cyinders, cones, spheres, and teapots with the click of a button. You can also translate or rotate your most recently created object. We were unable to make the ray intersection work however we believe we were close and you can have a look at our code to see for yourself. Enjoy :)\n\nControls:\n'a' - add object\n'j' - cube will be the next object added\n'k' - cylinder will be the next object added\n'i' - cone will be the next object added\n'o' - sphere will be the next object added\n'p' - teapot will be the next object added\nleft arrow - translate -x\nright arrow - translate +x\nup arrow - translate +y\ndown arrow - translate -y\n'm' - translate -z\n'n' - translate +z\n'z' - rotate -z\n'Z' - rotate +z\n'x' - rotate -x\n'X' - rotate +x\n'y' - rotate -y\n'Y' - rotate +y\n'f' - scale -x\n'F' - scale +x\n'g' - scale -y\n'G' - scale +y\n'h' - scale -z\n'H' - scale +z\n'q' or esc - exit");
 
 	init();
 
